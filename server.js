@@ -31,13 +31,24 @@ app.use(bodyParser.urlencoded({
 }));
 app.use(express.json());
 
+let BookInstance = require('./models/bookinstance');
+let Book = require('./models/book');
 
 app.get('/home', (_, res) => {
   Home.show_home(res);
 })
 
 app.get('/available', (_, res) => {
-  BooksStatus.show_all_books_status(res);
+  BookInstance.find({status: 'Available'})
+    .populate('book')
+    .then(bookInstances => {
+      const availableBooks = bookInstances.map(bi => ({
+        title: bi.book.title,
+        status: bi.status
+      }));
+      res.send(availableBooks);
+    })
+    .catch(err => res.status(500).send('Error retrieving available books: ' + err));
 })
 
 app.get('/books', (_, res) => {
@@ -46,9 +57,19 @@ app.get('/books', (_, res) => {
     .catch((_) => res.send('No books found'));
 })
 
+let Author = require('./models/author');
+
 app.get('/authors', (_, res) => {
-  Authors.show_all_authors(res);
-})
+  Author.find({})
+    .then(authors => {
+      const authorsList = authors.map(author => ({
+        name: author.name, // Utilizing the virtual property for author's full name
+        lifespan: author.lifespan // Utilizing the virtual property for author's lifespan
+      }));
+      res.send(authorsList);
+    })
+    .catch(err => res.status(500).send('Error retrieving authors: ' + err));
+});
 
 app.get('/book_dtls', (req, res) => {
   BookDetails.show_book_dtls(res, req.query.id);
